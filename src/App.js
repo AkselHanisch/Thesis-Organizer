@@ -1,11 +1,13 @@
 import React, { useState, useEffect } from 'react';
+import { auth, db } from './firebase';
+import { onAuthStateChanged, signInWithEmailAndPassword, signOut, GoogleAuthProvider, signInWithPopup } from 'firebase/auth';
+import { doc, getDoc, setDoc, onSnapshot } from 'firebase/firestore';
 import './App.css';
 
-// const statusColors = ['green', 'limegreen', 'yellow', 'orange', 'red'];
-const statusColors = ['red', 'orange', 'yellow', 'limegreen', 'green'];
+const statusColors = ['green', 'limegreen', 'yellow', 'orange', 'red'];
+const THESIS_DOC_ID = 'shared-thesis';
 
-const initialExplanation = 'This tool helps you organize your thesis sections and subsections.\n\nClick on the colored boxes to cycle through status colors indicating your progress.\n\nYou can add, edit, and delete sections and subsections as needed. Your data will be saved automatically in your browser\'s local storage.';
-
+const initialExplanation = 'This tool helps you organize your thesis sections and subsections.\n\nClick on the colored boxes to cycle through status colors indicating your progress.\n\nYou can add, edit, and delete sections and subsections as needed.';
 const initialSections = [
   {
     id: 1,
@@ -43,24 +45,64 @@ const initialSections = [
 ];
 
 function App() {
+  const [user, setUser] = useState(null);
   const [sections, setSections] = useState(initialSections);
   const [explanation, setExplanation] = useState(initialExplanation);
   const [nextId, setNextId] = useState(100);
+  const [loading, setLoading] = useState(true);
+  const [loginEmail, setLoginEmail] = useState('');
+  const [loginPassword, setLoginPassword] = useState('');
 
   useEffect(() => {
-    const savedSections = localStorage.getItem('thesisSections');
-    const savedExplanation = localStorage.getItem('thesisExplanation');
-    const savedNextId = localStorage.getItem('thesisNextId');
-    if (savedSections) setSections(JSON.parse(savedSections));
-    if (savedExplanation) setExplanation(savedExplanation);
-    if (savedNextId) setNextId(parseInt(savedNextId, 10));
+    const unsubscribe = onAuthStateChanged(auth, (currentUser) => {
+      setUser(currentUser);
+      setLoading(false);
+    });
+    return unsubscribe;
   }, []);
 
   useEffect(() => {
-    localStorage.setItem('thesisSections', JSON.stringify(sections));
-    localStorage.setItem('thesisExplanation', explanation);
-    localStorage.setItem('thesisNextId', nextId);
-  }, [sections, explanation, nextId]);
+    if (!user) return;
+    const thesisRef = doc(db, 'thesis', THESIS_DOC_ID);
+    const unsubscribe = onSnapshot(thesisRef, (docSnap) => {
+      if (docSnap.exists()) {
+        const data = docSnap.data();
+        setSections(data.sections || initialSections);
+        setExplanation(data.explanation || initialExplanation);
+      } else {
+        setDoc(thesisRef, { sections: initialSections, explanation: initialExplanation });
+      }
+    });
+    return unsubscribe;
+  }, [user]);
+
+  useEffect(() => {
+    if (!user) return;
+    const thesisRef = doc(db, 'thesis', THESIS_DOC_ID);
+    setDoc(thesisRef, { sections, explanation, updatedAt: new Date() }, { merge: true });
+  }, [sections, explanation, user]);
+
+  const handleLogin = async (e) => {
+    e.preventDefault();
+    try {
+      await signInWithEmailAndPassword(auth, loginEmail, loginPassword);
+    } catch (error) {
+      alert('Login failed: ' + error.message);
+    }
+  };
+
+  const handleGoogleLogin = async () => {
+    const provider = new GoogleAuthProvider();
+    try {
+      await signInWithPopup(auth, provider);
+    } catch (error) {
+      alert('Google login failed: ' + error.message);
+    }
+  };
+
+  const handleLogout = async () => {
+    await signOut(auth);
+  };
 
   const addSection = () => {
     const newId = nextId;
@@ -129,18 +171,48 @@ function App() {
     }
   };
 
+  if (loading) return <div>Loading...</div>;
+
+  if (!user) {
+    return (
+      <div className="login-overlay">
+        <div className="login-form">
+          <h2>Thesis Organizer Login</h2>
+          <form onSubmit={handleLogin}>
+            <input
+              type="email"
+              placeholder="Email"
+              value={loginEmail}
+              onChange={(e) => setLoginEmail(e.target.value)}
+              required
+            />
+            <input
+              type="password"
+              placeholder="Password"
+              value={loginPassword}
+              onChange={(e) => setLoginPassword(e.target.value)}
+              required
+            />
+            <button type="submit">Sign In with Email</button>
+          </form>
+          <button onClick={handleGoogleLogin}>Sign In with Google</button>
+          <p>New team? Add users in Firebase console first.</p>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="app">
       <header className="headline">
         <h1>Thesis Organizer</h1>
+        <button onClick={handleLogout}>Logout</button>
       </header>
-      
       <div className="explanation">
         <p contentEditable onBlur={(e) => setExplanation(e.target.innerText)} suppressContentEditableWarning>
           {explanation}
         </p>
       </div>
-
       {sections.map(section => (
         <div key={section.id} className="section">
           <div className="item section-item">
@@ -153,7 +225,7 @@ function App() {
               <button onClick={() => deleteSection(section.id)}>Delete</button>
             </div>
           </div>
-          <div class="subsections">
+          <div className="subsections">
             {section.subsections.map(sub => (
               <div key={sub.id} className="item sub-item">
                 <div className="color-box sub-color" style={{ backgroundColor: sub.color }} onClick={() => cycleColor(sub.id, false)} />
@@ -168,11 +240,11 @@ function App() {
           </div>
         </div>
       ))}
-
       <button className="add-section" onClick={addSection}>Add Section</button>
-
       {/* <div className="donate">
-        <a href="https://your-donate-link.com" target="_blank" rel="noopener noreferrer">Donate here</a>
+        <a href="https://your-donate-link.com" target="_blank" rel="noopener noreferrer">
+          <span role="img" aria-label="donate">💰</span> Donate here
+        </a>
       </div> */}
     </div>
   );
