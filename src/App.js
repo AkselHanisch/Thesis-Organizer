@@ -131,6 +131,10 @@ function App() {
 
   return (
     <div className="app">
+      <header className="headline">
+        <h1>Thesis Organizer</h1>
+      </header>
+      
       <div className="explanation">
         <p contentEditable onBlur={(e) => setExplanation(e.target.innerText)} suppressContentEditableWarning>
           {explanation}
