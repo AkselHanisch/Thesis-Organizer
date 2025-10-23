@@ -1,38 +1,120 @@
-.App {
+.app {
+  max-width: 800px;
+  margin: 0 auto;
+  padding: 40px 20px;
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  color: #333;
+  line-height: 1.6;
+}
+
+.explanation {
+  margin-bottom: 40px;
+  font-size: 16px;
+  color: #000000;
   text-align: center;
 }
 
-.App-logo {
-  height: 40vmin;
-  pointer-events: none;
+.section {
+  margin-bottom: 40px;
 }
 
-@media (prefers-reduced-motion: no-preference) {
-  .App-logo {
-    animation: App-logo-spin infinite 20s linear;
-  }
-}
-
-.App-header {
-  background-color: #282c34;
-  min-height: 100vh;
+.item {
   display: flex;
-  flex-direction: column;
   align-items: center;
-  justify-content: center;
-  font-size: calc(10px + 2vmin);
-  color: white;
+  padding: 10px;
+  border: 1px solid #eee;
+  border-radius: 8px;
+  background-color: #fff;
+  transition: box-shadow 0.2s;
 }
 
-.App-link {
-  color: #61dafb;
+.item:hover {
+  box-shadow: 0 2px 8px rgba(0,0,0,0.05);
 }
 
-@keyframes App-logo-spin {
-  from {
-    transform: rotate(0deg);
-  }
-  to {
-    transform: rotate(360deg);
-  }
+.section-item {
+  margin-bottom: 10px;
+}
+
+.color-box {
+  flex-shrink: 0;
+  margin-right: 15px;
+  border-radius: 4px;
+}
+
+.section-color {
+  width: 30px;
+  height: 30px;
+}
+
+.sub-color {
+  width: 20px;
+  height: 20px;
+}
+
+.item h2, .item h3 {
+  margin: 0;
+  flex-grow: 1;
+  font-size: 18px;
+  font-weight: 600;
+}
+
+.item h3 {
+  font-size: 16px;
+  font-weight: 500;
+}
+
+.subsections {
+  margin-left: 45px; /* Indent to align under section text */
+}
+
+.sub-item {
+  margin-bottom: 5px;
+}
+
+.controls {
+  display: flex;
+  align-items: center;
+  opacity: 0;
+  transition: opacity 0.2s;
+}
+
+.item:hover .controls {
+  opacity: 1;
+}
+
+.controls select, .controls button {
+  margin-left: 10px;
+  padding: 5px 10px;
+  font-size: 12px;
+  border: 1px solid #ddd;
+  border-radius: 4px;
+  background: #f9f9f9;
+  cursor: pointer;
+}
+
+.controls select {
+  appearance: none;
+}
+
+.add-section {
+  display: block;
+  margin: 20px auto;
+  padding: 10px 20px;
+  background: #007bff;
+  color: #fff;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+}
+
+.donate {
+  margin-top: 60px;
+  text-align: center;
+  font-size: 14px;
+}
+
+.donate a {
+  color: #007bff;
+  text-decoration: none;
 }
