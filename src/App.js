@@ -1,10 +1,10 @@
 import React, { useState, useEffect } from 'react';
 import { auth, db } from './firebase';
 import { onAuthStateChanged, signInWithEmailAndPassword, signOut, GoogleAuthProvider, signInWithPopup } from 'firebase/auth';
-import { doc, getDoc, setDoc, onSnapshot } from 'firebase/firestore';
+import { doc, getDoc, setDoc } from 'firebase/firestore'; // Removed onSnapshot
 import './App.css';
 
-const statusColors = ['green', 'limegreen', 'yellow', 'orange', 'red'];
+const statusColors = ['red', 'orange', 'yellow', 'limegreen', 'green'];
 const THESIS_DOC_ID = 'shared-thesis';
 
 const initialExplanation = 'This tool helps you organize your thesis sections and subsections.\n\nClick on the colored boxes to cycle through status colors indicating your progress.\n\nYou can add, edit, and delete sections and subsections as needed.';
@@ -52,35 +52,36 @@ function App() {
   const [loading, setLoading] = useState(true);
   const [loginEmail, setLoginEmail] = useState('');
   const [loginPassword, setLoginPassword] = useState('');
+  const [lastSaved, setLastSaved] = useState(null); // Track last save time
 
   useEffect(() => {
-    const unsubscribe = onAuthStateChanged(auth, (currentUser) => {
+    const unsubscribe = onAuthStateChanged(auth, async (currentUser) => {
       setUser(currentUser);
+      if (currentUser) {
+        const thesisRef = doc(db, 'thesis', THESIS_DOC_ID);
+        const docSnap = await getDoc(thesisRef); // Manual load
+        if (docSnap.exists()) {
+          const data = docSnap.data();
+          setSections(data.sections || initialSections);
+          setExplanation(data.explanation || initialExplanation);
+        } else {
+          await setDoc(thesisRef, { sections: initialSections, explanation: initialExplanation });
+        }
+      }
       setLoading(false);
     });
     return unsubscribe;
   }, []);
 
-  useEffect(() => {
-    if (!user) return;
-    const thesisRef = doc(db, 'thesis', THESIS_DOC_ID);
-    const unsubscribe = onSnapshot(thesisRef, (docSnap) => {
-      if (docSnap.exists()) {
-        const data = docSnap.data();
-        setSections(data.sections || initialSections);
-        setExplanation(data.explanation || initialExplanation);
-      } else {
-        setDoc(thesisRef, { sections: initialSections, explanation: initialExplanation });
-      }
-    });
-    return unsubscribe;
-  }, [user]);
+  // Removed auto-save useEffect for manual save to keep firebase quota in check
 
-  useEffect(() => {
+  const handleSave = async () => {
     if (!user) return;
     const thesisRef = doc(db, 'thesis', THESIS_DOC_ID);
-    setDoc(thesisRef, { sections, explanation, updatedAt: new Date() }, { merge: true });
-  }, [sections, explanation, user]);
+    await setDoc(thesisRef, { sections, explanation, updatedAt: new Date() }, { merge: true });
+    setLastSaved(new Date().toLocaleTimeString()); // Show save time
+    alert('Changes saved successfully!');
+  };
 
   const handleLogin = async (e) => {
     e.preventDefault();
@@ -241,6 +242,8 @@ function App() {
         </div>
       ))}
       <button className="add-section" onClick={addSection}>Add Section</button>
+      <button className="save-button" onClick={handleSave}>Save</button>
+      {lastSaved && <p>Last saved: {lastSaved}</p>}
       {/* <div className="donate">
         <a href="https://your-donate-link.com" target="_blank" rel="noopener noreferrer">
           <span role="img" aria-label="donate">💰</span> Donate here
